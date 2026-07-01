@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2022",
+    "outDir": "out",
+    "lib": ["ES2022"],
+    "sourceMap": true,
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "paths": {
+      "vscode": ["./vscode-mock.ts"]
+    },
+    "baseUrl": "."
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "out"],
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  }
+}

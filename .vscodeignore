@@ -1,0 +1,12 @@
+.vscode/**
+node_modules/**
+docs/**
+.gitignore
+Test.java
+*.cmd
+**/*.ts
+out/test/**
+out/vscode-mock.*
+!out/src/**
+.vscodeignore
+tsconfig.json
