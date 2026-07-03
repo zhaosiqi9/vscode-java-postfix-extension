@@ -30,6 +30,13 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
       return undefined;
     }
 
+    // 检查补全模式：manual 模式下不在系统补全列表中显示
+    const config = vscode.workspace.getConfiguration('javaPostfixCompletion');
+    const completionMode = config.get<string>('completionMode', 'inline');
+    if (completionMode === 'manual') {
+      return undefined;
+    }
+
     const lineText = document.lineAt(position.line).text;
 
     // Step 1: Pattern detection
