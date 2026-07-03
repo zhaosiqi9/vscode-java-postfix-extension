@@ -46,6 +46,7 @@ export const window = {
   showInformationMessage: () => undefined,
   showWarningMessage: () => undefined,
   showErrorMessage: () => undefined,
+  showQuickPick: (): Thenable<any> => Promise.resolve(undefined),
   createOutputChannel: () => ({ appendLine: () => {}, dispose: () => {}, show: () => {} }),
   createQuickPick: (): QuickPick => ({
     title: undefined as any,
