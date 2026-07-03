@@ -43,6 +43,21 @@ describe('Extension Activation', () => {
     expect(args[0]).to.deep.equal({ language: 'java' });
     // Third arg should be '.' as trigger character
     expect(args[2]).to.equal('.');
-    expect(mockContext.subscriptions.length).to.equal(1);
+    expect(mockContext.subscriptions.length).to.equal(2);
+  });
+
+  it('should register triggerSuggest command on activate', () => {
+    const registerSpy = sandbox.spy(vscode.commands, 'registerCommand');
+    const mockContext = makeMockContext();
+
+    // 清除模块缓存以测试全新激活
+    delete require.cache[require.resolve('../src/extension')];
+    const ext = require('../src/extension');
+    ext.activate(mockContext);
+
+    const commandNames = registerSpy.getCalls().map(c => c.args[0]);
+    expect(commandNames).to.include('java-postfix.triggerSuggest');
+    // 验证 subscription 数量：CompletionItemProvider + triggerSuggest 命令 = 2
+    expect(mockContext.subscriptions.length).to.equal(2);
   });
 });

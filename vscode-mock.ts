@@ -76,6 +76,10 @@ export const window = {
 
 export const commands = {
   executeCommand: () => undefined,
+  registerCommand: (
+    _command: string,
+    _callback: (...args: any[]) => any
+  ) => ({ dispose: () => {} }),
   registerTextEditorCommand: (
     _command: string,
     _callback: (textEditor: any, edit: any, ...args: any[]) => void
