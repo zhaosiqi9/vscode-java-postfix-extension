@@ -41,6 +41,32 @@ export class PatternDetector {
   }
 
   /**
+   * 检测 "expr." 模式（光标紧跟在点号后，尚未输入后缀字符）。
+   * 返回表达式的文本，或 null 表示未检测到。
+   */
+  detectDotOnly(
+    lineText: string,
+    cursorCol: number
+  ): { expr: string } | null {
+    const beforeCursor = lineText.substring(0, cursorCol);
+    if (!beforeCursor.endsWith('.')) {
+      return null;
+    }
+
+    const leftPart = beforeCursor.substring(0, beforeCursor.length - 1);
+    if (leftPart.length === 0 || leftPart.endsWith(' ') || leftPart.endsWith('\t')) {
+      return null;
+    }
+
+    const boundary = this.extractExpressionBeforeDot(leftPart);
+    if (!boundary.isValid || boundary.expr.length === 0) {
+      return null;
+    }
+
+    return { expr: boundary.expr };
+  }
+
+  /**
    * Scan leftwards from the end of leftPart to find the expression boundary.
    * Uses a stack to track parentheses matching.
    */

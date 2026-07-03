@@ -46,6 +46,7 @@ export const window = {
   showInformationMessage: () => undefined,
   showWarningMessage: () => undefined,
   showErrorMessage: () => undefined,
+  showQuickPick: (): Thenable<any> => Promise.resolve(undefined),
   createOutputChannel: () => ({ appendLine: () => {}, dispose: () => {}, show: () => {} }),
   createQuickPick: (): QuickPick => ({
     title: undefined as any,
@@ -75,6 +76,10 @@ export const window = {
 
 export const commands = {
   executeCommand: () => undefined,
+  registerCommand: (
+    _command: string,
+    _callback: (...args: any[]) => any
+  ) => ({ dispose: () => {} }),
   registerTextEditorCommand: (
     _command: string,
     _callback: (textEditor: any, edit: any, ...args: any[]) => void
@@ -197,6 +202,15 @@ export interface CancellationToken {
   onCancellationRequested(listener: (e: any) => any): { dispose(): void };
 }
 
+export class ThemeIcon {
+  id: string;
+  color?: any;
+  constructor(id: string, color?: any) {
+    this.id = id;
+    this.color = color;
+  }
+}
+
 export interface QuickPickItem {
   label: string;
   description?: string;
@@ -204,6 +218,7 @@ export interface QuickPickItem {
   picked?: boolean;
   alwaysShow?: boolean;
   buttons?: readonly any[];
+  iconPath?: ThemeIcon | Uri | { light: Uri; dark: Uri };
 }
 
 export interface QuickPick {

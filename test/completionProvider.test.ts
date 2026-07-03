@@ -50,6 +50,13 @@ describe('CompletionProvider', () => {
     });
 
     it('should return undefined when no suffix pattern and no dot at cursor', async () => {
+      sandbox.stub(vscode.workspace, 'getConfiguration').returns({
+        get: sandbox.stub().callsFake((section: string) => {
+          if (section === 'completionMode') return 'inline';
+          return undefined;
+        }),
+      } as any);
+
       const doc = makeMockDocument('java', 'myVar');
       const pos = makeMockPosition(0, 'myVar'.length);
       const ctx = makeMockContext();
@@ -237,6 +244,52 @@ describe('CompletionProvider', () => {
 
       expect(result![0].detail).to.be.a('string').that.is.not.empty;
       expect(result![0].detail).to.contain('if (user != null)');
+    });
+
+    describe('completionMode', () => {
+      it('should return completions when mode is inline (default)', async () => {
+        const templates = [
+          { name: 'null check', suffix: '.null', body: 'if ($EXPR$ != null) { $END$ }' },
+        ];
+        sandbox.stub(vscode.workspace, 'getConfiguration').returns({
+          get: sandbox.stub().callsFake((section: string) => {
+            if (section === 'templates') return templates;
+            if (section === 'completionMode') return 'inline';
+            return undefined;
+          }),
+        } as any);
+        sandbox.stub(vscode.workspace, 'fs').value(undefined);
+
+        const doc = makeMockDocument('java', 'user.null');
+        const pos = makeMockPosition(0, 'user.null'.length);
+        const ctx = makeMockContext('.');
+
+        const result = await provider.provideCompletionItems(doc, pos, {} as any, ctx);
+
+        expect(result).to.be.an('array').with.lengthOf(1);
+      });
+
+      it('should return undefined when mode is manual', async () => {
+        const templates = [
+          { name: 'null check', suffix: '.null', body: 'if ($EXPR$ != null) { $END$ }' },
+        ];
+        sandbox.stub(vscode.workspace, 'getConfiguration').returns({
+          get: sandbox.stub().callsFake((section: string) => {
+            if (section === 'templates') return templates;
+            if (section === 'completionMode') return 'manual';
+            return undefined;
+          }),
+        } as any);
+        sandbox.stub(vscode.workspace, 'fs').value(undefined);
+
+        const doc = makeMockDocument('java', 'user.null');
+        const pos = makeMockPosition(0, 'user.null'.length);
+        const ctx = makeMockContext('.');
+
+        const result = await provider.provideCompletionItems(doc, pos, {} as any, ctx);
+
+        expect(result).to.be.undefined;
+      });
     });
   });
 });

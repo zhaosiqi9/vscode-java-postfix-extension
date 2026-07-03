@@ -27,9 +27,28 @@
           "type": "array",
           "default": [],
           "description": "Custom postfix templates"
+        },
+        "javaPostfixCompletion.completionMode": {
+          "type": "string",
+          "enum": ["inline", "manual"],
+          "default": "inline",
+          "description": "补全模式: inline = 出现在系统补全列表中; manual = 仅通过快捷键触发 (Alt+S)"
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "java-postfix.triggerSuggest",
+        "title": "Java Postfix: Trigger Suggestion"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "java-postfix.triggerSuggest",
+        "key": "alt+s",
+        "when": "editorLangId == java"
+      }
+    ]
   },
   "extensionDependencies": [
     "redhat.java"

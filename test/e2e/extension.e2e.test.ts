@@ -37,7 +37,7 @@ describe('Java Postfix Completion E2E', () => {
 
     // Trigger the command — should not throw even with empty template config
     try {
-      await vscode.commands.executeCommand('java-postfix.trigger');
+      await vscode.commands.executeCommand('java-postfix.triggerSuggest');
     } catch {
       // Command may fail in test environment without real editor context, that's OK
     }
