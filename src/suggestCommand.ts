@@ -78,18 +78,45 @@ export class SuggestCommand {
     // 步骤 5: 构建 QuickPick 选项
     const items: (vscode.QuickPickItem & { template: PostfixTemplate })[] = matchingTemplates.map((t) => ({
       label: t.suffix,
-      description: t.description || t.name,
-      detail: truncatePreview(
+      description: truncatePreview(
         this.templateEngine.applyTemplate(t, expr, null).insertText
       ),
+      detail: t.description || t.name,
+      iconPath: new vscode.ThemeIcon('symbol-snippet'),
       template: t,
     }));
 
-    // 步骤 6: 弹出 QuickPick
-    const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: '选择 postfix 模板',
-      matchOnDescription: true,
-      matchOnDetail: true,
+    // 步骤 6: 用 createQuickPick 弹出选择列表
+    const qp = vscode.window.createQuickPick();
+    qp.items = items;
+    qp.placeholder = '选择 postfix 模板';
+    qp.matchOnDescription = true;
+    qp.matchOnDetail = true;
+
+    // 自定义过滤：按后缀前缀匹配（模拟 CompletionItem.filterText 行为）
+    qp.onDidChangeValue((value) => {
+      if (!value) {
+        qp.items = items;
+        return;
+      }
+      qp.items = items.filter((item) =>
+        item.label.startsWith(value)
+      );
+    });
+
+    const selected = await new Promise<(typeof items)[number] | undefined>((resolve) => {
+      qp.onDidAccept(() => {
+        const picked = qp.selectedItems[0] as (typeof items)[number] | undefined;
+        qp.hide();
+        resolve(picked);
+      });
+
+      qp.onDidHide(() => {
+        qp.dispose();
+        resolve(undefined);
+      });
+
+      qp.show();
     });
 
     if (!selected) {
