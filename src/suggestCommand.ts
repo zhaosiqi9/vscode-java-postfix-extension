@@ -4,6 +4,7 @@ import { PatternDetector } from './patternDetector';
 import { ExprValidator } from './exprValidator';
 import { TemplateEngine } from './templateEngine';
 import { PostfixTemplate } from './types';
+import { truncatePreview, computeReplaceRange } from './utils';
 
 export class SuggestCommand {
   private configManager: ConfigManager;
@@ -45,7 +46,7 @@ export class SuggestCommand {
       partialSuffix = extraction.suffix;
     } else {
       // 尝试检测 "expr." 模式（刚输入点号）
-      const dotResult = this.detectDotOnly(lineText, position.character);
+      const dotResult = this.patternDetector.detectDotOnly(lineText, position.character);
       if (!dotResult) {
         vscode.window.showWarningMessage('Java Postfix: 未检测到有效的表达式');
         return;
@@ -78,7 +79,7 @@ export class SuggestCommand {
     const items: (vscode.QuickPickItem & { template: PostfixTemplate })[] = matchingTemplates.map((t) => ({
       label: t.suffix,
       description: t.description || t.name,
-      detail: this.truncatePreview(
+      detail: truncatePreview(
         this.templateEngine.applyTemplate(t, expr, null).insertText
       ),
       template: t,
@@ -97,16 +98,8 @@ export class SuggestCommand {
 
     // 步骤 7: 展开模板并插入
     const result = this.templateEngine.applyTemplate(selected.template, expr, null);
-
-    // 计算替换范围
-    const suffixLength = partialSuffix.length > 0 ? partialSuffix.length + 1 : 1;
-    const exprStartCol = position.character - expr.length - suffixLength;
-    const range = new vscode.Range(
-      position.line,
-      exprStartCol,
-      position.line,
-      position.character
-    );
+    const range = computeReplaceRange(position, expr, partialSuffix);
+    const insertPos = new vscode.Position(position.line, position.character - expr.length - partialSuffix.length - 1);
 
     await editor.edit((editBuilder) => {
       editBuilder.replace(range, '');
@@ -114,39 +107,7 @@ export class SuggestCommand {
 
     await editor.insertSnippet(
       new vscode.SnippetString(result.insertText),
-      new vscode.Position(position.line, exprStartCol)
+      insertPos
     );
-  }
-
-  /**
-   * 检测 "expr." 模式（光标紧跟在点号后，尚未输入后缀字符）
-   */
-  private detectDotOnly(
-    lineText: string,
-    cursorCol: number
-  ): { expr: string } | null {
-    const beforeCursor = lineText.substring(0, cursorCol);
-    if (!beforeCursor.endsWith('.')) {
-      return null;
-    }
-
-    const leftPart = beforeCursor.substring(0, beforeCursor.length - 1);
-    if (leftPart.length === 0 || leftPart.endsWith(' ') || leftPart.endsWith('\t')) {
-      return null;
-    }
-
-    const boundary = this.patternDetector.extractExpressionBeforeDot(leftPart);
-    if (!boundary.isValid || boundary.expr.length === 0) {
-      return null;
-    }
-
-    return { expr: boundary.expr };
-  }
-
-  private truncatePreview(text: string, maxLen: number = 40): string {
-    if (text.length <= maxLen) {
-      return text;
-    }
-    return text.substring(0, maxLen - 3) + '...';
   }
 }

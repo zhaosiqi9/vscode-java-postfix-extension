@@ -4,6 +4,7 @@ import { PatternDetector } from './patternDetector';
 import { ExprValidator } from './exprValidator';
 import { TemplateEngine } from './templateEngine';
 import { PostfixTemplate, CompletionResult } from './types';
+import { truncatePreview, computeReplaceRange } from './utils';
 
 export class CompletionProvider implements vscode.CompletionItemProvider {
 
@@ -44,7 +45,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
       partialSuffix = extraction.suffix;
     } else {
       // Try to detect "expr." pattern (dot at cursor, no suffix yet)
-      const dotResult = this.detectDotOnly(lineText, position.character);
+      const dotResult = this.patternDetector.detectDotOnly(lineText, position.character);
       if (!dotResult) {
         return undefined;
       }
@@ -84,33 +85,6 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
   }
 
   /**
-   * Detect "expr." pattern where cursor is immediately after the dot
-   * (no suffix characters typed yet).
-   */
-  private detectDotOnly(
-    lineText: string,
-    cursorCol: number
-  ): { expr: string } | null {
-    const beforeCursor = lineText.substring(0, cursorCol);
-    if (!beforeCursor.endsWith('.')) {
-      return null;
-    }
-
-    const leftPart = beforeCursor.substring(0, beforeCursor.length - 1);
-    if (leftPart.length === 0 || leftPart.endsWith(' ') || leftPart.endsWith('\t')) {
-      return null;
-    }
-
-    // Use PatternDetector to scan the expression boundary in the text before the dot
-    const boundary = this.patternDetector.extractExpressionBeforeDot(leftPart);
-    if (!boundary.isValid || boundary.expr.length === 0) {
-      return null;
-    }
-
-    return { expr: boundary.expr };
-  }
-
-  /**
    * Build VS Code CompletionItems from matching templates.
    */
   private buildCompletionItems(
@@ -119,15 +93,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
     position: vscode.Position,
     partialSuffix: string
   ): vscode.CompletionItem[] {
-    // Calculate the range to replace: from expression start to cursor position
-    const suffixLength = partialSuffix.length > 0 ? partialSuffix.length + 1 : 1; // +1 for the dot
-    const exprStartCol = position.character - expr.length - suffixLength;
-    const range = new vscode.Range(
-      position.line,
-      exprStartCol,
-      position.line,
-      position.character
-    );
+    const range = computeReplaceRange(position, expr, partialSuffix);
 
     return templates.map((template) => {
       const result: CompletionResult = this.templateEngine.applyTemplate(template, expr, null);
@@ -137,7 +103,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
         vscode.CompletionItemKind.Snippet
       );
 
-      item.detail = this.truncatePreview(result.insertText);
+      item.detail = truncatePreview(result.insertText);
       item.filterText = expr + template.suffix;
       item.insertText = new vscode.SnippetString(result.insertText);
       item.range = range;
@@ -145,12 +111,5 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
 
       return item;
     });
-  }
-
-  private truncatePreview(text: string, maxLen: number = 40): string {
-    if (text.length <= maxLen) {
-      return text;
-    }
-    return text.substring(0, maxLen - 3) + '...';
   }
 }
