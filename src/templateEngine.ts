@@ -56,7 +56,7 @@ export class TemplateEngine {
       const lowerPartial = partialSuffix.toLowerCase();
       matched = templates.filter((t) => {
         const suffixWithoutDot = t.suffix.startsWith('.') ? t.suffix.substring(1) : t.suffix;
-        return suffixWithoutDot.startsWith(lowerPartial);
+        return suffixWithoutDot.toLowerCase().startsWith(lowerPartial);
       });
     }
 
