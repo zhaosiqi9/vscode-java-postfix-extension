@@ -50,15 +50,27 @@ export class TemplateEngine {
    * Used by the CompletionItemProvider for prefix-based filtering.
    * If partialSuffix is empty, returns all templates.
    */
-  findBySuffix(partialSuffix: string, templates: PostfixTemplate[]): PostfixTemplate[] {
-    if (!partialSuffix || partialSuffix.length === 0) {
-      return templates;
+  findBySuffix(partialSuffix: string, templates: PostfixTemplate[], typeInfo?: TypeInfo | null): PostfixTemplate[] {
+    let matched = templates;
+    if (partialSuffix && partialSuffix.length > 0) {
+      const lowerPartial = partialSuffix.toLowerCase();
+      matched = templates.filter((t) => {
+        const suffixWithoutDot = t.suffix.startsWith('.') ? t.suffix.substring(1) : t.suffix;
+        return suffixWithoutDot.startsWith(lowerPartial);
+      });
     }
-    const lowerPartial = partialSuffix.toLowerCase();
-    return templates.filter((t) => {
-      const suffixWithoutDot = t.suffix.startsWith('.') ? t.suffix.substring(1) : t.suffix;
-      return suffixWithoutDot.startsWith(lowerPartial);
-    });
+
+    // 如果提供了 typeInfo，在前缀匹配后追加类型过滤
+    if (typeInfo) {
+      matched = matched.filter((t) => {
+        if (!t.types || t.types.length === 0) {
+          return true; // 无类型约束 → 通配
+        }
+        return this.typeMatchesConstraint(typeInfo, t.types);
+      });
+    }
+
+    return matched;
   }
 
   /**
