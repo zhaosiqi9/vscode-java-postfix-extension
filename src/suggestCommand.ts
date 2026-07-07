@@ -4,6 +4,8 @@ import { PatternDetector } from './patternDetector';
 import { ExprValidator } from './exprValidator';
 import { TemplateEngine } from './templateEngine';
 import { PostfixTemplate } from './types';
+import { TypeInfo } from './types';
+import { TypeResolver } from './typeResolver';
 import { truncatePreview, computeReplaceRange } from './utils';
 
 export class SuggestCommand {
@@ -11,12 +13,14 @@ export class SuggestCommand {
   private patternDetector: PatternDetector;
   private exprValidator: ExprValidator;
   private templateEngine: TemplateEngine;
+  private typeResolver: TypeResolver;
 
   constructor() {
     this.configManager = new ConfigManager();
     this.patternDetector = new PatternDetector();
     this.exprValidator = new ExprValidator();
     this.templateEngine = new TemplateEngine();
+    this.typeResolver = new TypeResolver();
   }
 
   async triggerSuggest(): Promise<void> {
@@ -69,7 +73,24 @@ export class SuggestCommand {
     }
 
     // 步骤 4: 匹配模板
-    const matchingTemplates = this.templateEngine.findBySuffix(partialSuffix, templates);
+    const completionMode = vscode.workspace
+      .getConfiguration('javaPostfixCompletion')
+      .get<string>('completionMode', 'inline');
+
+    let matchingTemplates: PostfixTemplate[];
+    let typeInfo: TypeInfo | null = null;
+
+    if (completionMode === 'manualWithType') {
+      // 类型解析
+      const resolution = await this.typeResolver.resolveType(
+        document, expr, position.line, position.character
+      );
+      typeInfo = resolution.typeInfo;
+      matchingTemplates = this.templateEngine.findBySuffix(partialSuffix, templates, typeInfo);
+    } else {
+      matchingTemplates = this.templateEngine.findBySuffix(partialSuffix, templates);
+    }
+
     if (matchingTemplates.length === 0) {
       vscode.window.showWarningMessage('Java Postfix: 没有匹配的 postfix 模板');
       return;
@@ -124,7 +145,7 @@ export class SuggestCommand {
     }
 
     // 步骤 7: 展开模板并插入
-    const result = this.templateEngine.applyTemplate(selected.template, expr, null);
+    const result = this.templateEngine.applyTemplate(selected.template, expr, typeInfo);
     const range = computeReplaceRange(position, expr, partialSuffix);
     const insertPos = new vscode.Position(position.line, position.character - expr.length - partialSuffix.length - 1);
 
