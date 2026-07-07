@@ -169,6 +169,42 @@ describe('TemplateEngine', () => {
       const results = engine.findBySuffix('nu', []);
       expect(results).to.have.lengthOf(0);
     });
+
+    it('should filter by type when typeInfo is provided', () => {
+      const stringType: TypeInfo = {
+        fqn: 'java.lang.String',
+        simpleName: 'String',
+        allTypes: ['java.lang.String', 'java.lang.CharSequence', 'java.lang.Object'],
+      };
+
+      const results = engine.findBySuffix('', sampleTemplates, stringType);
+
+      // .isEmpty 约束 CharSequence → String 匹配（通过 allTypes）
+      // .null 约束 Object → String 匹配
+      // .sout 无约束 → 通配
+      // .var 无约束 → 通配
+      // .cast 无约束 → 通配
+      expect(results).to.have.lengthOf(5);
+      expect(results.map(t => t.name)).to.contain('string isEmpty');
+    });
+
+    it('should filter out type-mismatched templates when typeInfo is provided', () => {
+      const listType: TypeInfo = {
+        fqn: 'java.util.ArrayList',
+        simpleName: 'ArrayList',
+        allTypes: ['java.util.ArrayList', 'java.util.List', 'java.util.Collection', 'java.lang.Object'],
+      };
+
+      const results = engine.findBySuffix('', sampleTemplates, listType);
+
+      // .isEmpty 约束 CharSequence → ArrayList 不匹配（allTypes 无 CharSequence）
+      expect(results.map(t => t.name)).to.not.contain('string isEmpty');
+      // 其他 4 个模板应该都在
+      expect(results.map(t => t.name)).to.contain('null check');
+      expect(results.map(t => t.name)).to.contain('sout');
+      expect(results.map(t => t.name)).to.contain('var assign');
+      expect(results.map(t => t.name)).to.contain('cast');
+    });
   });
 
   describe('applyTemplate', () => {

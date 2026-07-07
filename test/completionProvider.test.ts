@@ -290,6 +290,28 @@ describe('CompletionProvider', () => {
 
         expect(result).to.be.undefined;
       });
+
+      it('should return undefined when mode is manualWithType', async () => {
+        const templates = [
+          { name: 'null check', suffix: '.null', body: 'if ($EXPR$ != null) { $END$ }' },
+        ];
+        sandbox.stub(vscode.workspace, 'getConfiguration').returns({
+          get: sandbox.stub().callsFake((section: string) => {
+            if (section === 'templates') return templates;
+            if (section === 'completionMode') return 'manualWithType';
+            return undefined;
+          }),
+        } as any);
+        sandbox.stub(vscode.workspace, 'fs').value(undefined);
+
+        const doc = makeMockDocument('java', 'user.null');
+        const pos = makeMockPosition(0, 'user.null'.length);
+        const ctx = makeMockContext('.');
+
+        const result = await provider.provideCompletionItems(doc, pos, {} as any, ctx);
+
+        expect(result).to.be.undefined;
+      });
     });
   });
 });

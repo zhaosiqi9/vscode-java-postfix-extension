@@ -30,9 +30,14 @@
         },
         "javaPostfixCompletion.completionMode": {
           "type": "string",
-          "enum": ["inline", "manual"],
+          "enum": ["inline", "manual", "manualWithType"],
           "default": "inline",
-          "description": "补全模式: inline = 出现在系统补全列表中; manual = 仅通过快捷键触发 (Alt+S)"
+          "enumDescriptions": [
+            "出现在系统补全列表中（点号触发），不做类型检查",
+            "仅通过快捷键触发（Alt+S），不做类型检查",
+            "仅通过快捷键触发（Alt+S），启用类型检查——过滤不匹配模板，$TYPE$ 替换为真实类型名"
+          ],
+          "description": "补全模式"
         }
       }
     },

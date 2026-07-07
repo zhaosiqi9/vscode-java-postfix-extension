@@ -321,5 +321,206 @@ describe('SuggestCommand', () => {
       qpStub._listeners['hide']();
       await promise;
     });
+
+    it('should filter by type and use real type name in manualWithType mode', async () => {
+      const editStub = sandbox.stub().resolves(true);
+      sandbox.stub(vscode.window, 'activeTextEditor').value({
+        document: {
+          languageId: 'java',
+          lineAt: sandbox.stub().returns({ text: 'name.' }),
+        },
+        selection: { active: new vscode.Position(0, 'name.'.length) },
+        insertSnippet: editStub,
+        edit: sandbox.stub().resolves(true),
+      });
+
+      const templates = [
+        { name: 'null check', suffix: '.null', body: 'if ($EXPR$ != null) { $END$ }', description: 'Null check' },
+        { name: 'var assign', suffix: '.var', body: '$TYPE_SIMPLE$ $VAR$ = $EXPR$;$END$' },
+      ];
+      sandbox.stub(vscode.workspace, 'getConfiguration').returns({
+        get: sandbox.stub().callsFake((section: string) => {
+          if (section === 'templates') return templates;
+          if (section === 'completionMode') return 'manualWithType';
+          return undefined;
+        }),
+      } as any);
+      sandbox.stub(vscode.workspace, 'fs').value(undefined);
+
+      // Mock TypeResolver.resolveType returns String type
+      const mockTypeResolver = {
+        resolveType: sandbox.stub().resolves({
+          typeInfo: {
+            fqn: 'java.lang.String',
+            simpleName: 'String',
+            allTypes: ['java.lang.String', 'java.lang.CharSequence', 'java.lang.Object'],
+          },
+          degraded: false,
+        }),
+      };
+      (suggestCommand as any).typeResolver = mockTypeResolver;
+
+      const qpStub = createQuickPickStub(sandbox);
+      sandbox.stub(vscode.window, 'createQuickPick').returns(qpStub as any);
+
+      const promise = suggestCommand.triggerSuggest();
+      await qpStub._shown;
+
+      // Both templates should show (.null has no type constraint, .var has no type constraint)
+      expect(qpStub.items).to.have.lengthOf(2);
+
+      // Select .var template
+      qpStub.selectedItems = [qpStub.items[1]]; // .var
+      qpStub._listeners['accept']();
+      await promise;
+
+      // Verify $TYPE_SIMPLE$ is replaced with String (not Object)
+      const snippetArg = editStub.firstCall.args[0];
+      expect(snippetArg.value).to.contain('String');
+      expect(snippetArg.value).to.not.contain('Object');
+    });
+
+    it('should filter out type-mismatched templates in manualWithType mode', async () => {
+      sandbox.stub(vscode.window, 'activeTextEditor').value({
+        document: {
+          languageId: 'java',
+          lineAt: sandbox.stub().returns({ text: 'name.isEmpty' }),
+        },
+        selection: { active: new vscode.Position(0, 'name.isEmpty'.length) },
+        insertSnippet: sandbox.stub().resolves(true),
+        edit: sandbox.stub().resolves(true),
+      });
+
+      const templates = [
+        { name: 'null check', suffix: '.null', body: 'if ($EXPR$ != null)' },
+        { name: 'string isEmpty', suffix: '.isEmpty', body: '$EXPR$.isEmpty()', types: ['java.lang.CharSequence'] },
+        { name: 'stream toList', suffix: '.toList', body: '$EXPR$.collect(Collectors.toList())', types: ['java.util.stream.Stream'] },
+      ];
+      sandbox.stub(vscode.workspace, 'getConfiguration').returns({
+        get: sandbox.stub().callsFake((section: string) => {
+          if (section === 'templates') return templates;
+          if (section === 'completionMode') return 'manualWithType';
+          return undefined;
+        }),
+      } as any);
+      sandbox.stub(vscode.workspace, 'fs').value(undefined);
+
+      const mockTypeResolver = {
+        resolveType: sandbox.stub().resolves({
+          typeInfo: {
+            fqn: 'java.lang.String',
+            simpleName: 'String',
+            allTypes: ['java.lang.String', 'java.lang.CharSequence', 'java.lang.Object'],
+          },
+          degraded: false,
+        }),
+      };
+      (suggestCommand as any).typeResolver = mockTypeResolver;
+
+      const qpStub = createQuickPickStub(sandbox);
+      sandbox.stub(vscode.window, 'createQuickPick').returns(qpStub as any);
+
+      const promise = suggestCommand.triggerSuggest();
+      await qpStub._shown;
+
+      // .isEmpty matches String (allTypes includes CharSequence) → shown
+      // .toList doesn't match (Stream not in String's allTypes) → filtered out
+      // .null is filtered by prefix (not matching "isEmpty") → not shown
+      expect(qpStub.items).to.have.lengthOf(1);
+      expect(qpStub.items[0].label).to.equal('.isEmpty');
+
+      qpStub._listeners['hide']();
+      await promise;
+    });
+
+    it('should degrade gracefully when type resolution fails in manualWithType mode', async () => {
+      sandbox.stub(vscode.window, 'activeTextEditor').value({
+        document: {
+          languageId: 'java',
+          lineAt: sandbox.stub().returns({ text: 'name.' }),
+        },
+        selection: { active: new vscode.Position(0, 'name.'.length) },
+        insertSnippet: sandbox.stub().resolves(true),
+        edit: sandbox.stub().resolves(true),
+      });
+
+      const templates = [
+        { name: 'null check', suffix: '.null', body: 'if ($EXPR$ != null) { $END$ }' },
+        { name: 'stream toList', suffix: '.toList', body: '$EXPR$.collect(Collectors.toList())', types: ['java.util.stream.Stream'] },
+      ];
+      sandbox.stub(vscode.workspace, 'getConfiguration').returns({
+        get: sandbox.stub().callsFake((section: string) => {
+          if (section === 'templates') return templates;
+          if (section === 'completionMode') return 'manualWithType';
+          return undefined;
+        }),
+      } as any);
+      sandbox.stub(vscode.workspace, 'fs').value(undefined);
+
+      // Mock TypeResolver returns degraded (LS unavailable)
+      const mockTypeResolver = {
+        resolveType: sandbox.stub().resolves({
+          typeInfo: null,
+          degraded: true,
+        }),
+      };
+      (suggestCommand as any).typeResolver = mockTypeResolver;
+
+      const qpStub = createQuickPickStub(sandbox);
+      sandbox.stub(vscode.window, 'createQuickPick').returns(qpStub as any);
+
+      const promise = suggestCommand.triggerSuggest();
+      await qpStub._shown;
+
+      // Degraded: no filtering, all templates shown
+      expect(qpStub.items).to.have.lengthOf(2);
+      expect(qpStub.items.map((i: any) => i.label)).to.contain('.null');
+      expect(qpStub.items.map((i: any) => i.label)).to.contain('.toList');
+
+      qpStub._listeners['hide']();
+      await promise;
+    });
+
+    it('should not call type resolver in manual mode', async () => {
+      sandbox.stub(vscode.window, 'activeTextEditor').value({
+        document: {
+          languageId: 'java',
+          lineAt: sandbox.stub().returns({ text: 'name.' }),
+        },
+        selection: { active: new vscode.Position(0, 'name.'.length) },
+        insertSnippet: sandbox.stub().resolves(true),
+        edit: sandbox.stub().resolves(true),
+      });
+
+      const templates = [
+        { name: 'null check', suffix: '.null', body: 'if ($EXPR$ != null) { $END$ }' },
+        { name: 'stream toList', suffix: '.toList', body: '$EXPR$.collect(Collectors.toList())', types: ['java.util.stream.Stream'] },
+      ];
+      sandbox.stub(vscode.workspace, 'getConfiguration').returns({
+        get: sandbox.stub().callsFake((section: string) => {
+          if (section === 'templates') return templates;
+          if (section === 'completionMode') return 'manual';
+          return undefined;
+        }),
+      } as any);
+      sandbox.stub(vscode.workspace, 'fs').value(undefined);
+
+      const resolveTypeSpy = sandbox.stub().resolves({ typeInfo: null, degraded: true });
+      (suggestCommand as any).typeResolver = { resolveType: resolveTypeSpy };
+
+      const qpStub = createQuickPickStub(sandbox);
+      sandbox.stub(vscode.window, 'createQuickPick').returns(qpStub as any);
+
+      const promise = suggestCommand.triggerSuggest();
+      await qpStub._shown;
+
+      // manual mode: typeResolver NOT called
+      expect(resolveTypeSpy.called).to.be.false;
+      // All templates shown (no type filtering)
+      expect(qpStub.items).to.have.lengthOf(2);
+
+      qpStub._listeners['hide']();
+      await promise;
+    });
   });
 });

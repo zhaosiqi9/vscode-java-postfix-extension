@@ -33,7 +33,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
     // 检查补全模式：manual 模式下不在系统补全列表中显示
     const config = vscode.workspace.getConfiguration('javaPostfixCompletion');
     const completionMode = config.get<string>('completionMode', 'inline');
-    if (completionMode === 'manual') {
+    if (completionMode === 'manual' || completionMode === 'manualWithType') {
       return undefined;
     }
 
