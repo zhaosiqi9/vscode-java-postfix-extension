@@ -3,8 +3,12 @@
  * Provides stub objects that sinon can stub on top of.
  */
 
+export type Thenable<T> = PromiseLike<T>;
+
 export const workspace = {
-  getConfiguration: (() => ({})) as any,
+  getConfiguration: (_section?: string, _scope?: any) => ({
+    get: <T>(_section: string, _defaultValue?: T): T | undefined => undefined,
+  }),
   workspaceFolders: undefined as any,
   fs: undefined as any,
   onDidChangeConfiguration: (_listener: (e: ConfigurationChangeEvent) => any) => ({ dispose: () => {} }),
@@ -32,7 +36,7 @@ export class Uri {
 }
 
 export interface WorkspaceConfiguration {
-  get<T>(section: string): T | undefined;
+  get<T>(section: string, defaultValue?: T): T | undefined;
 }
 
 export const EventEmitter = class {
@@ -42,10 +46,10 @@ export const EventEmitter = class {
 };
 
 export const window = {
-  activeTextEditor: undefined as any,
-  showInformationMessage: () => undefined,
-  showWarningMessage: () => undefined,
-  showErrorMessage: () => undefined,
+  activeTextEditor: undefined as TextEditor | undefined,
+  showInformationMessage: (_message: string, ..._items: any[]) => undefined,
+  showWarningMessage: (_message: string, ..._items: any[]) => undefined,
+  showErrorMessage: (_message: string, ..._items: any[]) => undefined,
   showQuickPick: (): Thenable<any> => Promise.resolve(undefined),
   createOutputChannel: () => ({ appendLine: () => {}, dispose: () => {}, show: () => {} }),
   createQuickPick: (): QuickPick => ({
