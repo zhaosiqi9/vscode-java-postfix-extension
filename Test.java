@@ -10,7 +10,8 @@ public class Test {
         System.out.println(list);
 
         String name = "张三";
-        name.sout
+        // name.sout
+        // name.isBlank()
         
         
     }
