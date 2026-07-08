@@ -10,3 +10,9 @@ out/vscode-mock.*
 !out/src/**
 .vscodeignore
 tsconfig.json
+docs
+.claude
+.codegraph
+graphify-out
+AGENTS.md
+CLAUDE.md
