@@ -2,7 +2,7 @@
   "name": "java-postfix-completion",
   "displayName": "Java Postfix Completion",
   "description": "Postfix completion for Java with type hierarchy awareness",
-  "version": "0.1.0",
+  "version": "0.0.3-fix",
   "publisher": "java-postfix",
   "engines": {
     "vscode": "^1.85.0"
@@ -17,7 +17,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/java-postfix-completion"
+    "url": "https://github.com/zhaosiqi9/vscode-java-postfix-extension"
   },
   "contributes": {
     "configuration": {
