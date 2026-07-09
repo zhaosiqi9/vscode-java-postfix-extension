@@ -14,8 +14,7 @@
     "declaration": true,
     "paths": {
       "vscode": ["./vscode-mock.ts"]
-    },
-    "baseUrl": "."
+    }
   },
   "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "out"],

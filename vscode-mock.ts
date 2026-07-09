@@ -127,11 +127,22 @@ export interface TextDocument {
 }
 
 export class Range {
-  constructor(_start: Position, _end: Position) {}
   start!: Position;
   end!: Position;
   isEmpty!: boolean;
   isSingleLine!: boolean;
+
+  constructor(start: Position, end: Position);
+  constructor(startLine: number, startCol: number, endLine: number, endCol: number);
+  constructor(a: Position | number, b: Position | number, c?: number, d?: number) {
+    if (a instanceof Position && b instanceof Position) {
+      this.start = a;
+      this.end = b;
+    } else if (typeof a === 'number' && typeof b === 'number') {
+      this.start = new Position(a, b);
+      this.end = new Position(c!, d!);
+    }
+  }
 }
 
 export type MarkedString = string | { language: string; value: string };
